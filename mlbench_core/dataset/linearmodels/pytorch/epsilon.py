@@ -1,11 +1,12 @@
 """ Create dataset and dataloader in PyTorch """
+import bz2
 import logging
 import os
-import torch.utils.data
-from urllib.request import urlretrieve
-import bz2
-import numpy as np
 import sys
+from urllib.request import urlretrieve
+
+import numpy as np
+import torch.utils.data
 
 _logger = logging.getLogger('mlbench')
 
@@ -45,7 +46,6 @@ class Epsilon(torch.utils.data.Dataset):
         self.labels_file = os.path.join(self.root, LABELS_FILE)
         if download:
             download_and_extract_dataset(root)
-
         assert file_exists(self.features_file), \
             "Feature file {} does not exist".format(self.features_file)
         assert file_exists(self.labels_file), \
@@ -65,6 +65,9 @@ class Epsilon(torch.utils.data.Dataset):
 
         self.features = self._read_file_lines(self.features_file)
         self.labels = self._read_file_lines(self.labels_file)
+
+        assert self.features.shape[1] == N_FEATURES, \
+            "Dataset does not have expected number of features"
 
     def __getitem__(self, item):
         feat, label = self.features[item], self.labels[item]
@@ -101,19 +104,20 @@ def download_and_extract_dataset(destination_dir):
     features_file = os.path.join(destination_dir, FEATURES_FILE)
     labels_file = os.path.join(destination_dir, FEATURES_FILE)
 
-    _logger.info("Downloading and extracting Epsilon Dataset")
+    if not file_exists(features_file):
+        _logger.info("Downloading and extracting Epsilon Dataset")
 
-    progress_download(os.path.join(DATASET_URL, FEATURES_FILE),
-                      features_file + ".bz2")
+        progress_download(os.path.join(DATASET_URL, FEATURES_FILE),
+                          features_file + ".bz2")
+        extract_bz2_file(features_file + ".bz2", features_file)
+        os.remove(features_file + ".bz2")
 
-    progress_download(os.path.join(DATASET_URL, LABELS_FILE),
-                      labels_file + ".bz2")
+    if not file_exists(labels_file):
+        progress_download(os.path.join(DATASET_URL, LABELS_FILE),
+                          labels_file + ".bz2")
 
-    extract_bz2_file(features_file + ".bz2", features_file)
-    extract_bz2_file(labels_file + ".bz2", labels_file)
-
-    os.remove(features_file + ".bz2")
-    os.remove(labels_file + ".bz2")
+        extract_bz2_file(labels_file + ".bz2", labels_file)
+        os.remove(labels_file + ".bz2")
 
     _logger.info("Download successful")
 

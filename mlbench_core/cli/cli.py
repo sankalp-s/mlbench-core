@@ -1,15 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Console script for mlbench_cli."""
-from mlbench_core.api import ApiClient, MLBENCH_IMAGES
-
-from appdirs import user_data_dir
-import click
-from kubernetes import client
-from pyhelm.chartbuilder import ChartBuilder
-from pyhelm.tiller import Tiller
-from tabulate import tabulate
-
 import configparser
 import json
 import os
@@ -17,8 +8,15 @@ import subprocess
 import sys
 from time import sleep
 from urllib import request
-import yaml
 
+import click
+import yaml
+from appdirs import user_data_dir
+from kubernetes import client
+from mlbench_core.api import ApiClient, MLBENCH_IMAGES
+from pyhelm.chartbuilder import ChartBuilder
+from pyhelm.tiller import Tiller
+from tabulate import tabulate
 
 GCLOUD_NVIDIA_DAEMONSET = ('https://raw.githubusercontent.com/'
                            'GoogleCloudPlatform/container-engine-accelerators/'
@@ -289,11 +287,13 @@ def delete_cluster():
 def delete_gcloud(name, zone, project):
     from google.cloud import container_v1
     import google.auth
+    from google.auth.exceptions import DefaultCredentialsError
 
     try:
         credentials, default_project = google.auth.default()
     except DefaultCredentialsError:
-        click.UsageError("Couldn't find gcloud credentials. Install the gcloud"
+        raise click.UsageError(
+            "Couldn't find gcloud credentials. Install the gcloud"
             " sdk ( https://cloud.google.com/sdk/docs/quickstart-linux ) and "
             "run 'gcloud auth application-default login' to login and create "
             "your credentials.")
@@ -352,7 +352,8 @@ def create_gcloud(num_workers, release, kubernetes_version, machine_type,
     try:
         credentials, default_project = google.auth.default()
     except DefaultCredentialsError:
-        click.UsageError("Couldn't find gcloud credentials. Install the gcloud"
+        raise click.UsageError(
+            "Couldn't find gcloud credentials. Install the gcloud"
             " sdk ( https://cloud.google.com/sdk/docs/quickstart-linux ) and "
             "run 'gcloud auth application-default login' to login and create "
             "your credentials.")
@@ -647,7 +648,7 @@ def write_config(config):
 def setup_client_from_config():
     config = get_config()
 
-    provider = config.get('general', 'provider')
+    provider = config.get('general', 'provider', fallback=None)
 
     if not provider:
         return False
@@ -660,6 +661,7 @@ def setup_client_from_config():
 
 def setup_gke_client_from_config(config):
     import google.auth
+    from google.auth.exceptions import DefaultCredentialsError
 
     cluster = config.get('gke', 'cluster')
     if not cluster:
@@ -668,7 +670,8 @@ def setup_gke_client_from_config(config):
     try:
         credentials, default_project = google.auth.default()
     except DefaultCredentialsError:
-        click.UsageError("Couldn't find gcloud credentials. Install the gcloud"
+        raise click.UsageError(
+            "Couldn't find gcloud credentials. Install the gcloud"
             " sdk ( https://cloud.google.com/sdk/docs/quickstart-linux ) and "
             "run 'gcloud auth application-default login' to login and create "
             "your credentials.")
